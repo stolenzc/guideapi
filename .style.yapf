@@ -1,0 +1,12 @@
+[style]
+# Insert a blank line before a 'def' or 'class' immediately nested
+# within another 'def' or 'class'. For example:
+#
+#   class Foo:
+#                      # <------ this blank line
+#     def method():
+#       ...
+blank_line_before_nested_class_or_def=True
+
+# The column limit.
+column_limit=100
