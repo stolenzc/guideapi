@@ -1,12 +1,14 @@
 import inspect
 import os
 from collections import defaultdict
-# TODO @stolenzc after Python3.9 can replace List with list
-from typing import List, Union
+# TODO @stolenzc after Python3.9 can replace List with list, Tuple with tuple
+from typing import List, Tuple, Union
 
 from jinja2 import Environment, FileSystemLoader
 from parse import parse
 from webob import Request, Response
+
+from response_type import ResponseType
 
 
 class API(object):
@@ -22,7 +24,11 @@ class API(object):
         """
 
         def wrapper(handler):
-            self.add_route(path, handler, methods)
+            if inspect.isclass(handler):
+                for method, class_handler in inspect.getmembers(handler, lambda a: inspect.isfunction(a)):
+                    self.add_route(path, class_handler, method)
+            else:
+                self.add_route(path, handler, methods)
             return handler
 
         return wrapper
@@ -60,7 +66,7 @@ class API(object):
             # regular expression to find path
             parse_result = parse(path, request_path)
             if parse_result is not None:
-                # 返回路由对应的方法和路由本身
+                # return handler and original path
                 return handler, parse_result.named  # type: ignore
         return None, None
 
@@ -73,7 +79,6 @@ class API(object):
         Returns:
             response: response
         """
-        """通过 webob 将请求的环境信息转为request对象"""
         request = Request(environ)
         response = self.handle_request(request)
 
@@ -82,7 +87,7 @@ class API(object):
     def __call__(self, environ, start_response):
         return self.wsgi_app(environ, start_response)
 
-    def handle_request(self, request):
+    def handle_request(self, request: Request) -> Response:
         """
         deal with the handler
         """
@@ -97,12 +102,12 @@ class API(object):
                     # find method in class handler
                     handler = getattr(handler(), request_method, None)
                     if handler is None:  # if method not found, not supported request method
-                        raise AttributeError("Method now allowed", request.method)
+                        self.set_response_status(response, ResponseType.STATUS_405)
+                        return response
                 handler_response = handler(request, response, **kwargs)
                 if handler_response and isinstance(handler_response, str):
                     response.text = handler_response
             else:
-                # 返回默认错误
                 self.defalut_response(response)
         except Exception as e:
             raise e
@@ -114,6 +119,12 @@ class API(object):
         """
         response.status_code = 404
         response.text = "404 Not Found"
+
+    def set_response_status(self, response: Response, status_type: Tuple[int, str]):
+        """
+        set response http code and message
+        """
+        response.status_code, response.text = status_type
 
     def template(self, template_name, context=None):
         """
