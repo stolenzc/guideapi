@@ -1,7 +1,5 @@
-from enum import Enum
 
-
-class ResponseType(Enum):
+class ResponseType():
 
     # Successful response
     STATUS_200 = (200, "OK")
