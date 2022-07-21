@@ -8,8 +8,8 @@ from jinja2 import Environment, FileSystemLoader
 from parse import parse
 from webob import Request, Response
 
-from exception import MethodNotAllowed, NotFound
-from response_type import ResponseType
+from .exception import MethodNotAllowed, NotFound
+from .response_type import ResponseType
 
 
 class API(object):
